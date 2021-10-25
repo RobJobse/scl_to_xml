@@ -13,7 +13,8 @@ public class Scl_to_xml_app {
 
 		System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 	
-	    Test test = new Test("LektestOrg");
+	    //Test test = new Test("if");
+	    If_parser p = new If_parser("ifif");
 
 	}
 

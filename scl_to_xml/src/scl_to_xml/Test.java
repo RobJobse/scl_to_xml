@@ -60,7 +60,7 @@ public class Test {
 		PS savedState = PS.E_CASE;
 		
 		StringTokenizer stok;
-		regel = in.readLine();
+	//	regel = in.readLine();
 		outfw.println("<model>");
 		while(in.ready()) {
 
