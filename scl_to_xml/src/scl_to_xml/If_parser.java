@@ -12,12 +12,13 @@ import java.util.StringTokenizer;
 
 public class If_parser {
 	
-	enum PS  { E_IF,  	// s00 expect if
-	       E_VW_IF,   	// s01 expect voorwaarde or (new) if
-	       E_THEN,      // s02 expect then
-	       E_ACT,   	// s03 expect action
-	       E_END	 	// s04 expect end_if
-	};  	// expect comment end	
+	enum PS  { 
+		E_IF,  		// s00 expect if
+	    E_VW_IF,   	// s01 expect voorwaarde or (new) if
+	    E_THEN,     // s02 expect then
+	    E_ACT,   	// s03 expect action
+	    E_END	 	// s04 expect end_if
+	};  		
 
 	
 	public PS parseToken(String token, PS state) {
