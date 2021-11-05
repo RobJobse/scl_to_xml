@@ -61,6 +61,8 @@ public class If_parser {
 	    //outfw = new PrintWriter(fileWriter);
    		
 	    List<IfAction> alist = new ArrayList();  
+	    
+	    
 
 	  //  alist.add(new IfAction("Mango","mangoActie") );  
 
