@@ -14,7 +14,7 @@ public class Scl_to_xml_app {
 		System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 	
 	  //  Test test = new Test("inertiserenEnLektest");
-	    Basic btest = new Basic("lektest");
+	    Basic btest = new Basic("test01");
 	    
 /*	    If_parser p = new If_parser("ifif");
 

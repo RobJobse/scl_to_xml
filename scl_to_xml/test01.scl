@@ -1,0 +1,80 @@
+	    CASE #state OF
+	        #IDLE:
+	            IF #onEntry THEN
+	                #oToevoer := 0;
+	                #rodeLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #osCmd.stelNietBeschikbaar (*AND NOT #osCmd.stelBeschikbaar*)THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            ELSIF #osCmd.stelBeschikbaar (*AND NOT #osCmd.stelNietBeschikbaar*)THEN
+	                IF #druk < #param.maxKoppeldruk THEN
+	                    #newState := #AANKOPPELEN_MAG;
+	                ELSE
+	                    #newState := #AFLAAT_AANKOPPELEN;
+	                END_IF;
+	            END_IF;
+
+	        #NIETBESCHIKBAAR:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	                #rodeLed.cmd := #LED_OFF;
+	                #groeneLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #osCmd.stelBeschikbaar THEN
+	                IF #druk < #param.maxKoppeldruk - #param.drukHysterese THEN
+	                    #newState := #AANKOPPELEN_MAG;
+	                ELSE
+	                    #newState := #AFLAAT_AANKOPPELEN;
+	                END_IF;
+	            ELSIF #osCmd.startInertiseren THEN
+	                #newState := #INERTISEREN_ERROR; // default
+	                IF #drukCentaalPaneel > #param.ip.maxDrukPT701 THEN
+	                    #errNo := 1; // druk te hoog H2 ipv N2 ??
+	                ELSIF #drukCentaalPaneel < #param.ip.minDrukPT701 THEN
+	                    #errNo := 2; // N2 druk te laag om goed te kunnen inertiseren
+	                ELSIF NOT #gb704B THEN
+	                    #errNo := 3; // H2 afsluiter XV704 niet dicht
+	                ELSIF NOT #gbToevoerDicht THEN
+	                    #errNo := 4; // Toevoer afsluiter niet dicht
+	                ELSIF NOT #gbBurenDicht THEN
+	                    #errNo := 5; // Toevoer afsluiters van buur vulpunten niet beide dicht
+	                ELSE
+	                    #newState := #INERTISEREN;
+	                END_IF;
+	            ELSIF #druk < #param.drukSuppletieOpen THEN
+	                #newState := #DRUKSUPPLETIE;
+	            END_IF;
+	            
+	        #MEETINTERVAL: 
+	            IF #onEntry THEN
+	                IF #intervalTeller = 0 THEN #beginDruk := #druk; END_IF;
+	                #intervalBeginDruk := #druk;
+	                #intervalTeller := #intervalTeller + 1;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #CONTROLE;
+	            END_IF;
+	            
+	        #CONTROLE: 
+	            IF #onEntry THEN
+	                #intervalEindDruk := #druk;
+	                IF #intervalBeginDruk - #intervalEindDruk > #param.maxIntervalDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                    #errNo := 4; // lektest failed op overschrijding maximale interval drukval ;
+	                ELSIF #beginDruk - #intervalEindDruk > #param.maxDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                    #errNo := 5; // lektest failed op overschrijding maximale totale drukval ;
+	                ELSIF #intervalTeller >= #param.meetCycles THEN
+	                    #newState := #DRUKAFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                ELSE
+	                    #newState := #MEETINTERVAL;
+	                    #maxStapTijd := #param.intervalTijd;
+	                END_IF;
+	            END_IF;
+	            
+end_case;// ha
+	            
