@@ -4,9 +4,9 @@
 	                #oToevoer := 0;
 	                #rodeLed.cmd := #LED_OFF;
 	            END_IF;
-	            IF #osCmd.stelNietBeschikbaar (*AND NOT #osCmd.stelBeschikbaar*)THEN
+	            IF #osCmd.stelNietBeschikbaar (*AND NOT #osCmd.stelBeschikbaar*) THEN
 	                #newState := #NIETBESCHIKBAAR;
-	            ELSIF #osCmd.stelBeschikbaar (*AND NOT #osCmd.stelNietBeschikbaar*)THEN
+	            ELSIF #osCmd.stelBeschikbaar (*AND NOT #osCmd.stelNietBeschikbaar*) THEN
 	                IF #druk < #param.maxKoppeldruk THEN
 	                    #newState := #AANKOPPELEN_MAG;
 	                ELSE
