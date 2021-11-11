@@ -34,13 +34,10 @@ public class ParsingStateMachine {
 		//FileWriter fileWriter = new FileWriter(filename+".xml");
 		//outfw = new PrintWriter(fileWriter);
 
-		// info
-		int stateCount = 0;
 
 		String regel;
 		String tok;
 
-		String begin_parse_token = "CASE";
 		boolean parsing_active = false;
 
 		StringTokenizer stok;
@@ -67,9 +64,7 @@ public class ParsingStateMachine {
 				if (parsing_active) {   
 					
 					String utok = tok.toUpperCase();
-
-					
-					
+	
 					switch ( state) {
 					case "INIT"  : 	
 						if (utok.contains("CASE")){
@@ -94,8 +89,15 @@ public class ParsingStateMachine {
 					case "IF"  : 	
 						if (utok.equals("THEN")){
 							updateState("THEN");
+						} else if (utok.contains("ONENTRY")){
+							updateState("ONENTRY");
 						}
 						break;
+					case "ONENTRY"  : 	
+						if (utok.equals("THEN")){
+							updateState("THEN");
+						}
+						break;						
 					case "THEN"  : 	
 						if (utok.equals("ELSIF")){
 							updateState("ELSIF");
@@ -105,8 +107,21 @@ public class ParsingStateMachine {
 							updateState("END_IF");
 						} else if (utok.equals("IF")){
 							updateState("IF");
-						}						
+						} else if (utok.equals("#NEWSTATE")){
+							updateState("NEWSTATE");
+						}					
 						break;	
+					case "NEWSTATE"	:
+						if (utok.equals("ELSIF")){
+							updateState("ELSIF");
+						} else if (utok.equals("ELSE")){
+							updateState("ELSE");
+						} else if (utok.contains("END_IF")){
+							updateState("END_IF");
+						} else if (utok.equals("IF")){
+							updateState("IF");
+						}
+						break;
 					case "END_IF"  :
 						if (utok.equals("IF")){
 							updateState("IF");
@@ -125,11 +140,15 @@ public class ParsingStateMachine {
 					case "ELSIF"  :
 						if (utok.equals("THEN")){
 							updateState("THEN");
+						} else if (utok.equals("#NEWSTATE")){
+							updateState("NEWSTATE");
 						}
 						break;	
 					case "ELSE"  :
 						if (utok.contains("END_IF")){
 							updateState("END_IF");
+						} else if (utok.equals("#NEWSTATE")){
+							updateState("NEWSTATE");
 						}
 						break;							
 					default :
