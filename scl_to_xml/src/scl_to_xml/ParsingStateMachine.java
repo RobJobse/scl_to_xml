@@ -19,6 +19,7 @@ public class ParsingStateMachine {
 	PrintWriter outfw;  // for later
 	String state = "INIT" ;
 	int ifLevel = 0;
+	boolean onEntryFlag;
 
 	/**
 	 *     Constructor
@@ -37,6 +38,8 @@ public class ParsingStateMachine {
 
 		String regel;
 		String tok;
+		
+
 
 		boolean parsing_active = false;
 
@@ -68,7 +71,8 @@ public class ParsingStateMachine {
 					switch ( state) {
 					case "INIT"  : 	
 						if (utok.contains("CASE")){
-							updateState("CASE");
+							System.out.println("<model>");
+							supdateState("CASE");							
 						}
 						break;
 					case "CASE"  : 	
@@ -78,7 +82,7 @@ public class ParsingStateMachine {
 						break;
 					case "OF"  : 	
 						if (utok.endsWith(":")){
-							updateState("SL");
+							noteSubvertex(utok);
 						}
 						break;
 					case "SL"  : 	
@@ -90,12 +94,12 @@ public class ParsingStateMachine {
 						if (utok.equals("THEN")){
 							updateState("THEN");
 						} else if (utok.contains("ONENTRY")){
-							updateState("ONENTRY");
+							noteOnEntryStart();
 						}
 						break;
 					case "ONENTRY"  : 	
 						if (utok.equals("THEN")){
-							updateState("THEN");
+							updateState("THEN");							
 						}
 						break;						
 					case "THEN"  : 	
@@ -105,11 +109,14 @@ public class ParsingStateMachine {
 							updateState("ELSE");
 						} else if (utok.contains("END_IF")){
 							updateState("END_IF");
-						} else if (utok.equals("IF")){
+							if(onEntryFlag) noteOnEntryEnd();
+						} else if (utok.equals("IF") && !onEntryFlag){
 							updateState("IF");
 						} else if (utok.equals("#NEWSTATE")){
 							updateState("NEWSTATE");
-						}					
+						} else if(onEntryFlag) {
+						    noteEntryToken(tok);	
+						}
 						break;	
 					case "NEWSTATE"	:
 						if (utok.equals("ELSIF")){
@@ -128,11 +135,12 @@ public class ParsingStateMachine {
 						} else if (utok.contains("END_IF")){
 							updateState("END_IF");
 						} else if (utok.endsWith(":")){
-							updateState("SL");
+							noteSubvertex(utok);
 						} else if (utok.equals("ELSIF")){
 							updateState("ELSIF");
 						} else if (utok.contains("END_CASE")){
-							updateState("END_CASE");
+							supdateState("END_CASE");
+							System.out.println("</model>");
 						}
 							
 
@@ -155,7 +163,7 @@ public class ParsingStateMachine {
 
 						break;		   			
 					}
-					//System.out.println("<Lang>"+token+"</Lang state=\""+state+"\""+ifLevel+">");					
+				
 
 
 
@@ -172,5 +180,34 @@ public class ParsingStateMachine {
 		state = newState;
 		System.out.println(state);
 	}
-
+	
+	/**
+	 * Silent update
+	 * @param newState
+	 */
+	void supdateState(String newState) {
+		state = newState;
+	}
+	void noteSubvertex(String subvert) {
+		supdateState("SL");
+		System.out.println("    <subvertex>");
+		System.out.println("        <name>"+subvert+"</name>");
+	}
+	
+	void noteOnEntryStart() {
+		supdateState("ONENTRY");
+		onEntryFlag = true;
+		System.out.println("        <onEntry>");		
+	}
+	void noteOnEntryEnd() {
+		supdateState("THEN");
+		onEntryFlag = false;
+		System.out.println("        </onEntry>");		
+	}	
+	void noteEntryToken(String tok) {
+		if (tok.contains(";")) 
+			System.out.println(tok); 
+		else 
+			System.out.print(tok+" ");
+	}
 } // class
