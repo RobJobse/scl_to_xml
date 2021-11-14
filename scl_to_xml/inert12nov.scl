@@ -1,0 +1,111 @@
+	    CASE #state OF
+	        #IDLE: // 0
+	            IF #onEntry THEN
+	                #oIdle    := 1;
+	                #oDone    := 0;
+	                #oError   := 0;
+	                #errNo    := 0;
+	                #cyclusTeller := 0;
+	            END_IF;
+	            IF #cmdStart AND #vrijgave AND #gbToevoerDicht THEN
+	                #newState := #OPENAFLAAT;
+	                #maxStapTijd := #param.maxAflaatTijd;
+	            END_IF;
+	            
+	        #OPENAFLAAT: // 20
+	            IF #onEntry THEN
+	                #oIdle    := 0;
+	                #oAflaat  := 1;
+	            END_IF;
+	            
+	            IF #druk < #param.maxDrukNaAflaat THEN
+	                #newState := #SLUITAFLAAT;
+	                #maxStapTijd := t#5s;
+	            END_IF;
+	            
+	            IF #timeOut.Q THEN
+	                #newState := #ERROR;
+	                #errNo    := 1; // Inertiseren timeout drukaflaten
+	            END_IF;
+	            
+	            IF #eStop THEN
+	                #history := #state;
+	                #newState  := #ESTOP_HOLD;
+	            END_IF; 
+	            
+	        #SLUITAFLAAT: // 30
+	            IF #onEntry THEN
+	                #oAflaat  := 0;
+	            END_IF;
+	            
+	            IF #timeOut.Q THEN
+	                #newState := #OPENTOEVOER;
+	                #maxStapTijd := #param.maxOpdrukTijd;
+	            END_IF;
+	            
+	        #OPENTOEVOER: // 40
+	            IF #onEntry THEN
+	                #oToevoer := 1;
+	            END_IF;
+	            
+	            IF #druk > #param.minDrukNaOpDruk THEN
+	                #newState := #SLUITTOEVOER;
+	                #maxStapTijd := #param.maxStapTijd;
+	            END_IF;
+	            
+	            IF #timeOut.Q THEN
+	                #newState := #ERROR;
+	                #errNo    := 2; // Inertiseren timeout N2 druk opbouw
+	            END_IF;
+	            
+	            IF #eStop THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            
+	        #SLUITTOEVOER: // 50
+	            IF #onEntry THEN
+	                #oToevoer     := 0;
+	                #cyclusTeller := #cyclusTeller + 1;
+	            END_IF;
+	            
+	            IF #gbToevoerDicht AND #cyclusTeller <= #param.inertCycles THEN
+	                #newState := #OPENAFLAAT;
+	                #maxStapTijd := #param.maxAflaatTijd;
+	            END_IF;
+	            
+	            IF #gbToevoerDicht AND #cyclusTeller > #param.inertCycles THEN
+	                #newState := #DONE;
+	            END_IF;
+	            
+	        #DONE: // 60
+	            IF #onEntry THEN
+	                #oDone    := 1;
+	            END_IF;
+	            IF #cmdStop THEN
+	                #newState := #IDLE;
+	            END_IF;
+	            
+	        #ERROR: // 100
+	            IF #onEntry THEN
+	                #oError   := 1;
+	                #oAflaat  := 0;
+	                #oToevoer := 0;
+	            END_IF;
+	            IF #cmdStop THEN
+	                #newState := #IDLE;
+	            END_IF;
+	            
+	        #ESTOP_HOLD: // 110
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	                //#historyPT := #timeOut.PT; hoeft niet blijft ongewijzigd
+	            END_IF;
+	            
+	            IF NOT #eStop THEN
+	                #newState := #history;
+	                //#maxStapTijd := #historyPT; hoeft niet blijft ongewijzigd
+	            END_IF;
+	
+	    END_CASE;

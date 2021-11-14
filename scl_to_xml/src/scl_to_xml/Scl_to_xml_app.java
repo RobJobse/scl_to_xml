@@ -14,6 +14,7 @@ public class Scl_to_xml_app {
 	
 		ParsingStateMachine psm = new ParsingStateMachine("test01");
 	    
+		CondActionTest castest = new CondActionTest();
 	}
 
 }

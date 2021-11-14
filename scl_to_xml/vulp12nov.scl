@@ -1,0 +1,337 @@
+	    CASE #state OF
+	        #IDLE:
+	            IF #onEntry THEN
+	                #oToevoer := 0;
+	                #oAflaat := 0;
+	                #oTrailerESD := 0;
+	                #oError := 0;
+	                #errNo := 0;
+	                #InertiseerFB.vrijgave := 1; //??
+	                #InertiseerFB.cmdStart := 0;
+	                #InertiseerFB.cmdStop := 0;
+	                #lektestFB.vrijgave := 1;  //??
+	                #lektestFB.cmdStart := 0;
+	                #lektestFB.cmdStop := 0;
+	                #groeneLed.cmd := #LED_OFF;
+	                #witteLed.cmd := #LED_OFF;
+	                #rodeLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #osCmd.stelNietBeschikbaar (*AND NOT #osCmd.stelBeschikbaar*) THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            ELSIF #osCmd.stelBeschikbaar (*AND NOT #osCmd.stelNietBeschikbaar*) THEN
+	                IF #druk < #param.maxKoppeldruk THEN
+	                    #newState := #AANKOPPELEN_MAG;
+	                ELSE
+	                    #newState := #AFLAAT_AANKOPPELEN;
+	                END_IF;
+	            END_IF;
+	            
+	        #NIETBESCHIKBAAR:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	                #rodeLed.cmd := #LED_OFF;
+	                #groeneLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #osCmd.stelBeschikbaar THEN
+	                IF #druk < #param.maxKoppeldruk - #param.drukHysterese THEN
+	                    #newState := #AANKOPPELEN_MAG;
+	                ELSE
+	                    #newState := #AFLAAT_AANKOPPELEN;
+	                END_IF;
+	            ELSIF #osCmd.startInertiseren THEN
+	                #newState := #INERTISEREN_ERROR; // default
+	                IF #drukCentaalPaneel > #param.ip.maxDrukPT701 THEN
+	                    #errNo := 1; // druk te hoog H2 ipv N2 ??
+	                ELSIF #drukCentaalPaneel < #param.ip.minDrukPT701 THEN
+	                    #errNo := 2; // N2 druk te laag om goed te kunnen inertiseren
+	                ELSIF NOT #gb704B THEN
+	                    #errNo := 3; // H2 afsluiter XV704 niet dicht
+	                ELSIF NOT #gbToevoerDicht THEN
+	                    #errNo := 4; // Toevoer afsluiter niet dicht
+	                ELSIF NOT #gbBurenDicht THEN
+	                    #errNo := 5; // Toevoer afsluiters van buur vulpunten niet beide dicht
+	                ELSE
+	                    #newState := #INERTISEREN;
+	                END_IF;
+	            ELSIF #druk < #param.drukSuppletieOpen THEN
+	                #newState := #DRUKSUPPLETIE;
+	            END_IF;
+	            
+	        #DRUKSUPPLETIE:
+	            IF #onEntry THEN
+	                #oToevoer := 1;
+	            END_IF;
+	            IF #druk > #param.drukSuppletieOpen + #param.drukHysterese THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            END_IF;
+	            
+	        #AFLAAT_AANKOPPELEN:
+	            IF #onEntry THEN
+	                #oAflaat := 1;
+	                #groeneLed.cmd := #LED_OFF;
+	                #rodeLed.cmd := #LED_ON;
+	            END_IF;
+	            IF #osCmd.stelNietBeschikbaar THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            ELSIF #druk < #param.maxKoppeldruk - #param.drukHysterese THEN
+	                #newState := #AANKOPPELEN_MAG;
+	            END_IF;
+	            
+	        #INERTISEREN:
+	            IF #onEntry THEN
+	                #InertiseerFB.cmdStop := 0;
+	                #InertiseerFB.cmdStart := 1;
+	            END_IF;
+	            IF #InertiseerFB.oDone THEN
+	                #newState := #INERTISEREN_DONE;
+	                #errNo := 0; // succes
+	            END_IF;
+	            IF #InertiseerFB.oError THEN
+	                #newState := #INERTISEREN_ERROR;
+	                #errNo := #InertiseerFB.oErrNo;
+	            END_IF;
+	            
+	        #INERTISEREN_DONE:
+	            IF NOT #osCmd.startInertiseren THEN
+	                #newState := #RELEASE_INERTISEREN;
+	            END_IF;
+	            
+	        #INERTISEREN_ERROR:
+	            IF NOT #osCmd.startInertiseren THEN
+	                #newState := #RELEASE_INERTISEREN;
+	            END_IF;
+	            
+	        #RELEASE_INERTISEREN:
+	            IF #onEntry THEN
+	                #InertiseerFB.cmdStop := 1;
+	                #InertiseerFB.cmdStart := 0;
+	                #errNo := 0; // reset error
+	            END_IF;
+	            IF #InertiseerFB.oIdle THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            END_IF;
+	            
+	        #AANKOPPELEN_MAG:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #groeneLed.cmd := #LED_BLINK;
+	                #rodeLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #groeneButton THEN
+	                #newState := #AANGEMELD;
+	            END_IF;
+	            IF #druk > #param.maxKoppeldruk + #param.drukHysterese THEN
+	                #newState := #AFLAAT_AANKOPPELEN;
+	            END_IF;
+	            IF #osCmd.stelNietBeschikbaar THEN
+	                #newState := #NIETBESCHIKBAAR;
+	            END_IF;
+	            
+	        #AANGEMELD:
+	            IF #onEntry THEN
+	                #groeneLed.cmd := #LED_ON;
+	            END_IF;
+	            IF #osCmd.startVullen THEN
+	                #newState := #LEKTESTEN;
+	            END_IF;
+	            
+	        #LEKTESTEN:
+	            IF #onEntry THEN
+	                #oTrailerBeginDruk := 0.0;
+	                #oTrailerEindDruk := 0.0;
+	                #lektestFB.cmdStop := 0;
+	                #lektestFB.cmdStart := 1;
+	            END_IF;
+	            IF #lektestFB.oDone AND NOT #commError THEN
+	                #newState := #RELEASE_LEKTEST;
+	                #maxStapTijd := t#30s;
+	                #errNo := 0; // succes
+	            END_IF;
+	            IF #lektestFB.oError THEN
+	                #errNo := #lektestFB.oErrNo; //    sneaky foutje errNo;  
+	                #newState := #RESET_LEKTEST;
+	            END_IF;
+	            
+	            
+	        #RELEASE_LEKTEST:
+	            IF #onEntry THEN
+	                #lektestFB.cmdStop := 1;
+	                #lektestFB.cmdStart := 0;
+	            END_IF;
+	            IF #lektestFB.oIdle AND #timeOut.Q THEN
+	                #newState := #STARTDRUKMETING;
+	            END_IF;
+	            
+	        #RESET_LEKTEST:
+	            IF #onEntry THEN
+	                #lektestFB.cmdStop := 1;
+	                #lektestFB.cmdStart := 0;
+	                #rodeLed.cmd := #LED_ON;
+	                #groeneLed.cmd := #LED_BLINK;
+	            END_IF;
+	            IF #lektestFB.oIdle THEN
+	                #newState := #ERROR_LEKTEST;
+	            END_IF;
+	            
+	        #ERROR_LEKTEST:
+	            IF #rodeButton OR #osCmd.stopVullen THEN
+	                #newState := #AFLAAT_AFKOPPELEN;
+	                #rodeLed.cmd := #LED_OFF;
+	                #groeneLed.cmd := #LED_OFF;
+	                #errNo := 0; // reset error
+	            END_IF;
+	            IF #groeneButton THEN
+	                #newState := #LEKTESTEN;
+	                #rodeLed.cmd := #LED_OFF;
+	                #groeneLed.cmd := #LED_ON;
+	                #errNo := 0; // reset error
+	            END_IF;
+	            
+	        #STARTDRUKMETING:
+	            IF #onEntry THEN
+	                #oTrailerESD := 1;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                IF #gbTrailerOpen THEN
+	                    #lektestFB.cmdStop := 0;  // ? hoeft niet bij start wordt stop gereset
+	                    #newState := #VULLEN;
+	                    #maxStapTijd := t#10s; // neww
+	                ELSE
+	                    #lektestFB.cmdStop := 0;  // ? hoeft niet bij start wordt stop gereset
+	                    #newState := #ERROR;
+	                    #errNo := 9; // trailer klep open melding niet ontvangen 
+	                END_IF;
+	            END_IF;
+	            IF #eStop_commError THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            
+	        #VULLEN:
+	            IF #onEntry THEN
+	                #oTrailerBeginDruk := #druk;
+	                #druk1 := #druk;
+	                #oToevoer := 1;
+	                #oTrailerESD := 1;
+	            END_IF;
+	            IF ((#druk > #param.maxVuldruk) AND #timeOut.Q) OR #osCmd.stopVullen OR #rodeButton THEN // new
+	                #newState := #STOPDRUKMETING;
+	                #maxStapTijd := #param.stabilisatieTijd;
+	            END_IF;
+	            IF #druk < #param.minTrailerDruk THEN
+	                #newState := #ERROR;
+	                #errNo := 10;
+	            END_IF;
+	            IF #eStop_commError THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            
+	            
+	        #STOPDRUKMETING:
+	            IF #onEntry THEN
+	                #oToevoer := 0;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #TRAILERAFSLUITEN;
+	                #maxStapTijd := #param.maxLooptijd;
+	            END_IF;
+	            IF #eStop_commError THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            
+	        #TRAILERAFSLUITEN:
+	            IF #onEntry THEN
+	                #oTrailerEindDruk := #druk;
+	                #oTrailerESD := 0;
+	            END_IF;
+	            IF #gbTrailerDicht THEN
+	                #newState := #AFLAAT_AFKOPPELEN;
+	                #maxStapTijd := #param.maxAflaatTijd;
+	            END_IF;
+	            IF #eStop_commError THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #ERROR;
+	                #errNo := 6; // trailer klep dicht melding niet ontvangen 
+	            END_IF;
+	            
+	        #AFLAAT_AFKOPPELEN:
+	            IF #onEntry THEN
+	                #oAflaat := 1;
+	                #groeneLed.cmd := #LED_OFF;
+	                #rodeLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #druk < (#param.maxKoppeldruk - #param.drukHysterese) THEN
+	                #newState := #AFKOPPELEN_MAG;
+	            END_IF;
+	            IF #eStop_commError THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #ERROR;
+	                #errNo := 7; // Druk niet onder maxKoppeldruk gekomen na aflaten 
+	            END_IF;
+	            
+	        #ERROR:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	                #oTrailerESD := 0;
+	                #rodeLed.cmd := #LED_ON;
+	            END_IF;
+	            IF #osCmd.resetError THEN
+	                #newState := #AFLAAT_AFKOPPELEN;
+	                #maxStapTijd := #param.maxAflaatTijd;
+	            END_IF;
+	            
+	        #AFKOPPELEN_MAG:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #witteLed.cmd := #LED_BLINK;
+	                #rodeLed.cmd := #LED_OFF;
+	            END_IF;
+	            IF #witteButton AND NOT #commError THEN
+	                #newState := #AFGEMELD;
+	                #maxStapTijd := t#30s;
+	            END_IF;
+	            IF #druk > (#param.maxKoppeldruk + #param.drukHysterese) THEN
+	                #newState := #AFKOPPELEN_NOK;
+	            END_IF;
+	            
+	            
+	        #AFKOPPELEN_NOK:
+	            IF #onEntry THEN
+	                #oAflaat := 1;
+	                #witteLed.cmd := #LED_OFF;
+	                #rodeLed.cmd := #LED_ON;
+	            END_IF;
+	            IF #druk < (#param.maxKoppeldruk - #param.drukHysterese) THEN
+	                #newState := #AFKOPPELEN_MAG;
+	            END_IF;
+	            
+	            
+	        #AFGEMELD:
+	            IF #onEntry THEN
+	                #witteLed.cmd := #LED_ON;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #IDLE;
+	            END_IF;
+	            
+	        #ESTOP_HOLD:
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	                #oTrailerESD := 0;
+	            END_IF;
+	            IF NOT #eStop_commError THEN
+	                #newState := #history;
+	            END_IF;
+	            
+	    END_CASE;

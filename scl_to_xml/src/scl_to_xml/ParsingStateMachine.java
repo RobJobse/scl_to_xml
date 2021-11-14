@@ -20,7 +20,7 @@ public class ParsingStateMachine {
 	String state = "INIT" ;
 	int ifLevel = 0;
 	boolean onEntryFlag;
-
+	boolean ifWithinOnEntryFlag;
 	/**
 	 *     Constructor
 	 * @param filename  without .scl extention
@@ -92,7 +92,10 @@ public class ParsingStateMachine {
 						break;
 					case "IF"  : 	
 						if (utok.equals("THEN")){
-							updateState("THEN");
+							if(onEntryFlag) {
+								noteEntryToken(tok);
+							} else
+							    updateState("THEN");
 						} else if (utok.contains("ONENTRY")){
 							noteOnEntryStart();
 						}
@@ -108,10 +111,17 @@ public class ParsingStateMachine {
 						} else if (utok.equals("ELSE")){
 							updateState("ELSE");
 						} else if (utok.contains("END_IF")){
-							updateState("END_IF");
+							if(ifWithinOnEntryFlag)
+								noteEntryToken(tok);
+							else
+								updateState("END_IF");
 							if(onEntryFlag) noteOnEntryEnd();
-						} else if (utok.equals("IF") && !onEntryFlag){
-							updateState("IF");
+						} else if (utok.equals("IF")){
+							if(onEntryFlag) {
+								noteEntryToken(tok);
+								ifWithinOnEntryFlag = true;
+							}else
+							   updateState("IF");
 						} else if (utok.equals("#NEWSTATE")){
 							updateState("NEWSTATE");
 						} else if(onEntryFlag) {
@@ -178,7 +188,7 @@ public class ParsingStateMachine {
 
 	void updateState(String newState) {
 		state = newState;
-		System.out.println(state);
+		System.out.println("-"+state+"-");
 	}
 	
 	/**

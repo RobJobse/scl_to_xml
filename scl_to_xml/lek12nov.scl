@@ -1,0 +1,156 @@
+	    CASE #state OF
+	        #IDLE: 
+	            IF #onEntry THEN
+	                #oIdle    := 1;
+	                #oDone    := 0;
+	                #oError   := 0;
+	                #errNo    := 0;
+	                #intervalTeller := 0;
+	            END_IF;
+	            IF #cmdStart AND #vrijgave AND #gbToevoerDicht THEN
+	                #newState := #TOEVOEROPEN;
+	                #maxStapTijd := #param.maxToevoertijd;
+	            END_IF;
+	            
+	        #TOEVOEROPEN: 
+	            IF #onEntry THEN
+	                #oIdle    := 0;
+	                #oToevoer := 1;
+	            END_IF;
+	            IF #eStop THEN
+	                #history  := #state;
+	                #newState := #ESTOP_HOLD;
+	                #maxStapTijd := #maxStapTijd - #timeOut.ET; // adjust timer setpoint for hold situation
+	            ELSIF #timeOut.Q THEN
+	                IF #druk >= #param.minStartDruk THEN
+	                    #newState := #STABILISATIE;
+	                    #maxStapTijd := #param.stabilisatieTijd;
+	                ELSE
+	                    #newState := #ERR_TOEVOERDICHT;
+	                    #errNo    := 1; // Lektest minimale begindruk niet bereikt binnen toevoer tijd
+	                END_IF;
+	            END_IF;
+	            
+	        #STABILISATIE: 
+	            IF #onEntry THEN
+	                #oToevoer  := 0;
+	            END_IF;
+	            IF #timeOut.Q AND #druk >= #param.minStartDruk THEN
+	                IF #gbToevoerDicht THEN
+	                    #newState := #MEETINTERVAL;
+	                    #maxStapTijd := #param.intervalTijd;
+	                ELSE
+	                    #newState := #ERR_TOEVOERDICHT;
+	                    #errNo := 3; // Lektest na stabilisatietijd geen toevoer dich terugmelding ontvangen                    
+	                END_IF;
+	            END_IF;
+	            IF  #druk < #param.minStartDruk THEN
+	                #newState := #ERR_TOEVOERDICHT;
+	                #errNo := 2; // Lektest tijdens stabilisatietijd druk onder minimale begindruk gekomen
+	            END_IF;
+	            
+	        #MEETINTERVAL: 
+	            IF #onEntry THEN
+	                IF #intervalTeller = 0 THEN
+	                    #beginDruk := #druk;
+	                END_IF;
+	                #intervalBeginDruk := #druk;
+	                #intervalTeller := #intervalTeller + 1;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #CONTROLE;
+	            END_IF;
+	            
+	        #CONTROLE: 
+	            IF #onEntry THEN
+	                #intervalEindDruk := #druk;
+	                IF #intervalBeginDruk - #intervalEindDruk > #param.maxIntervalDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxAflaatTijd;
+	                    #errNo := 4; // lektest failed op overschrijding maximale interval drukval ;
+	                ELSIF #beginDruk - #intervalEindDruk > #param.maxDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxAflaatTijd;
+	                    #errNo := 5; // lektest failed op overschrijding maximale totale drukval ;
+	                ELSIF #intervalTeller >= #param.meetCycles THEN
+	                    #newState := #DRUKAFLATEN;
+	                    #maxStapTijd := #param.maxAflaatTijd;
+	                ELSE
+	                    #newState := #MEETINTERVAL;
+	                    #maxStapTijd := #param.intervalTijd;
+	                END_IF;
+	            END_IF;
+	            
+	        #DRUKAFLATEN:
+	            IF #onEntry THEN
+	                #oAflaat := 1;
+	            END_IF;
+	            IF #druk < #param.MaxAflaatDruk THEN
+	                #newState := #DONE;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #errNo := 6; // Lektest timeout tijdens aflaten
+	                #newState := #ERROR;
+	            END_IF;
+	            IF #eStop THEN
+	                #history := #state;
+	                #newState := #ESTOP_HOLD;
+	                #maxStapTijd := #maxStapTijd - #timeOut.ET; // adjust timer setpoint for hold situation
+	            END_IF;
+	        #DONE: 
+	            IF #onEntry THEN
+	                #oAflaat := 0;
+	                #oDone   := 1;
+	                #oError  := 0;
+	            END_IF;
+	            IF #cmdStop THEN
+	                #newState := #IDLE;
+	            END_IF;
+	            
+	        #ERR_TOEVOERDICHT:
+	            IF #onEntry THEN
+	                #oToevoer := 0;
+	            END_IF;
+	            IF #gbToevoerDicht THEN
+	                #newState := #ERROR_AFLATEN;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                #newState := #ERROR_AFLATEN;
+	                // hier zou een tweede error op een eerste komen 
+	            END_IF;
+	                
+	            
+	        #ERROR_AFLATEN:
+	            IF #onEntry THEN
+	                #oAflaat := 1;
+	            END_IF;
+	            IF #druk < #param.MaxAflaatDruk THEN
+	                #newState := #ERROR;
+	            END_IF;
+	            IF #timeOut.Q THEN
+	                // #errNo := 7;  heeft geen zin bedekt de andere 
+	                #newState := #ERROR;
+	            END_IF;
+	            
+	        #ERROR:
+	            IF #onEntry THEN
+	                #oError   := 1;
+	                #oDone    := 0;
+	                #oAflaat  := 0;
+	                #oToevoer := 0;
+	            END_IF;
+	            IF #cmdStop THEN
+	                #newState := #IDLE;
+	            END_IF;
+	            
+	        #ESTOP_HOLD:
+	            IF #onEntry THEN
+	                
+	                #oAflaat := 0;
+	                #oToevoer := 0;
+	            END_IF;            
+	            IF NOT #eStop THEN
+	                #newState := #history;
+	            END_IF; 
+	
+	    END_CASE;
