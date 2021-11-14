@@ -23,11 +23,11 @@ public class ActionList extends ArrayList<Action> {
 			System.out.println("<guard>");
 			System.out.println(condition);
 			System.out.println("</guard>");	
-			System.out.println("<effect>");
+			//System.out.println("<effect>");
 			for (Action ac : this) {
 				ac.print();
 			}
-			System.out.println("</effect>");			
+			//System.out.println("</effect>");			
 			
 		}
 	}	

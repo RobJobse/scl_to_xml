@@ -12,7 +12,7 @@ public class Scl_to_xml_app {
 
 		System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 	
-		ParsingStateMachine psm = new ParsingStateMachine("test01");
+		// ParsingStateMachine psm = new ParsingStateMachine("test01");
 	    
 		CondActionTest castest = new CondActionTest();
 	}

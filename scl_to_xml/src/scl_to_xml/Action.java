@@ -3,7 +3,7 @@ package scl_to_xml;
 //enum actionType { EFFECT, TARGET };
 
 public class Action {
-	enum AT { EFFECT, TARGET }; // { EFFECT, TARGET, IFEXPR };
+	enum AT { EFFECT, TARGET, ONENTRY }; // { EFFECT, TARGET, IFEXPR };
 	public AT type;
 	public boolean lineIsIfExpression; // controls which field is valid
 	public String line;          // this member
@@ -34,12 +34,24 @@ public class Action {
 	
 	public void print() {
 		if(!lineIsIfExpression) {
-			System.out.println(line);
+			if(type==AT.EFFECT) {
+				System.out.println("<effect>");
+				System.out.println(line);
+				System.out.println("</effect>");
+			} else if(type==AT.TARGET) {
+				System.out.println("<target>");
+				System.out.println(line);
+				System.out.println("</target>");
+			} else
+				System.out.println(line);
+			
 		} else {
 			if(!ifLine.cas.isEmpty()) {
-			System.out.println("<guard>");
-			System.out.println(ifLine.cas.get(0).condition  );
-			System.out.println("</guard>");			
+			
+				for(ActionList al : ifLine.cas ) {
+					al.print();
+				}
+						
 			}
 		}
 	}
