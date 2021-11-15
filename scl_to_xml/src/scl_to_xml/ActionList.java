@@ -32,6 +32,12 @@ public class ActionList extends ArrayList<Action> {
 		}
 	}	
 	
+	public void clear() {
+		super.clear();
+		onEntry = false;
+		newState = "";
+	}
+	
 	
 	
 }
