@@ -63,7 +63,7 @@ public class CondActionTest {
 		al1.add(new Action("#groeneLed.cmd := #LED_OFF;",AT.ONENTRY) ); 		
 		blok1.cas.add(al1);		
 
-		blok1.print();
+//		blok1.print();
 		
 		blok1.cas.clear();
 		al1.clear();	
@@ -103,8 +103,83 @@ public class CondActionTest {
 		al11.condition = "#druk < #param.drukSuppletieOpen";
 		al11.add(new Action("DRUKSUPPLETIE", AT.TARGET));	
 		blok1.cas.add(al11);
-		blok1.print();		
+//		blok1.print();		
+		
+		
+		 blok1 = new IfExpression();	
+		 innerBlok = new IfExpression();
+		 innerBlok2 = new IfExpression();
+		
+		 al1 = new ActionList();
+		 al2 = new ActionList();
+		 al3 = new ActionList();
+		 al4 = new ActionList();		
+		 al5 = new ActionList();
+		 al6 = new ActionList();
+		 al7 = new ActionList();
+		 al8 = new ActionList();		
+		 al9 = new ActionList();
+		 al10 = new ActionList();	
+		 al11 = new ActionList();			
+		
+	
+//	     
+			al1.onEntry = true;
+			al1.add(new Action("#intervalEindDruk := #druk;", AT.EFFECT));
+			al1.add(new Action(innerBlok));
+			
+
+			al3.condition = "#intervalBeginDruk - #intervalEindDruk > #param.maxIntervalDrukval";
+			al3.add(new Action("#newState := #ERROR_AFLATEN;", AT.TARGET));
+			al3.add(new Action("#maxStapTijd := #param.maxStapTijd;", AT.EFFECT));
+			al3.add(new Action("#errNo := 4;", AT.EFFECT));
+
+					
+			al4.condition = "#beginDruk - #intervalEindDruk > #param.maxDrukval";
+			al4.add(new Action("ERROR_AFLATEN", AT.TARGET));
+			al4.add(new Action("#maxStapTijd := #param.maxStapTijd;", AT.EFFECT));
+			al4.add(new Action("#errNo := 5;", AT.EFFECT));
+			
+			al5.condition = "#intervalTeller >= #param.meetCycles";
+			al5.add(new Action("DRUKAFLATEN", AT.TARGET));
+			al5.add(new Action("#maxStapTijd := #param.maxStapTijd;", AT.EFFECT));
+			
+			al6.condition = "else";
+			al6.add(new Action("MEETINTERVAL", AT.TARGET));
+			al6.add(new Action("#maxStapTijd := #param.intervalTijd;", AT.EFFECT));
+			
+			innerBlok.cas.add(al3);
+			innerBlok.cas.add(al4);
+			innerBlok.cas.add(al5);
+			innerBlok.cas.add(al6);
+
+
+			blok1.cas.add(al1);
+			
+			blok1.print();		
+
+		
+		
 /*
+	
+	            IF #onEntry THEN
+	                #intervalEindDruk := #druk;
+	                IF #intervalBeginDruk - #intervalEindDruk > #param.maxIntervalDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                    #errNo := 4; // lektest failed op overschrijding maximale interval drukval ;
+	                ELSIF #beginDruk - #intervalEindDruk > #param.maxDrukval THEN
+	                    #newState := #ERROR_AFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                    #errNo := 5; // lektest failed op overschrijding maximale totale drukval ;
+	                ELSIF #intervalTeller >= #param.meetCycles THEN
+	                    #newState := #DRUKAFLATEN;
+	                    #maxStapTijd := #param.maxStapTijd;
+	                ELSE
+	                    #newState := #MEETINTERVAL;
+	                    #maxStapTijd := #param.intervalTijd;
+	                END_IF;
+	            END_IF;	
 	
 	        #NIETBESCHIKBAAR:
 	            IF #onEntry THEN
