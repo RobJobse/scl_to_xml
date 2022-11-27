@@ -9,12 +9,13 @@ import java.io.IOException;
 public class Scl_to_xml_app {
 
 	public static void main(String[] args) throws FileNotFoundException,IOException {
-
+		System.out.println("current path"+System.getProperty("user.dir"));
 		System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 	
-		// ParsingStateMachine psm = new ParsingStateMachine("test01");
+		ParsingStateMachine psm = new ParsingStateMachine("test01");
 	    
-		CondActionTest castest = new CondActionTest();
+
+		// CondActionTest castest = new CondActionTest();
 	}
 
 }

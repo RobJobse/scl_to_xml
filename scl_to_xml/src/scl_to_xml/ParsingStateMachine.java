@@ -29,7 +29,7 @@ public class ParsingStateMachine {
 	 */
 	public ParsingStateMachine(String filename) throws FileNotFoundException,IOException{
 		BufferedReader in
-		= new BufferedReader(new FileReader(filename+".scl"));
+		= new BufferedReader(new FileReader("scl_to_xml\\"+filename+".scl"));
 		//  inertiserenEnLektest.scl
 
 		//FileWriter fileWriter = new FileWriter(filename+".xml");
